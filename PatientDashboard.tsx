@@ -19,6 +19,12 @@ interface Appointment {
   purpose: string;
 }
 
+interface CombinedData {
+  doctorVisits: DoctorVisit[];
+  medications: Medication[];
+  appointments: Appointment[];
+}
+
 interface PatientDashboardProps {}
 
 const PatientDashboard: React.FC<PatientDashboardProps> = () => {
@@ -29,13 +35,12 @@ const PatientDashboard: React.FC<PatientDashboardProps> = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      const doctorVisitsResponse = await axios.get(`${process.env.REACT_APP_API_URL}/doctorVisits`);
-      const medicationsResponse = await axios.get(`${process.env.REACT_APP_API_URL}/medications`);
-      const appointmentsResponse = await axios.get(`${process.env.REACT_APP_API_URL}/appointments`);
+      const responseData = await axios.get<CombinedData>(`${process.env.REACT_APP_API_URL}/combinedData`);
       
-      setDoctorVisits(doctorVisitsResponse.data);
-      setMedications(medicationsResponse.data);
-      setAppointments(appointmentsResponse.data);
+      const { doctorVisits, medications, appointments } = responseData.data;
+      setDoctorVisits(doctorVisits);
+      setMedications(medications);
+      setAppointments(appointments);
     };
 
     fetchData().catch(console.error);
@@ -52,6 +57,7 @@ const PatientDashboard: React.FC<PatientDashboardProps> = () => {
 
   const handleBookAppointment = async (appointment: Appointment) => {
     await axios.post(`${process.env.REACT_APP_API_URL}/bookAppointment`, appointment);
+    // Update local state optimistically
     setAppointments([...appointments, appointment]);
   };
 
