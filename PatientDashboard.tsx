@@ -28,26 +28,20 @@ interface CombinedData {
 interface PatientDashboardProps {}
 
 const PatientDashboard: React.FC<PatientDashboardProps> = () => {
-  const [doctorVisits, setDoctorVisits] = useState<DoctorVisit[]>([]);
-  const [medications, setMedications] = useState<Medication[]>([]);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [combinedData, setCombinedData] = useState<CombinedData>({ doctorVisits: [], medications: [], appointments: [] });
   const [message, setMessage] = useState<string>('');
 
   useEffect(() => {
-    const fetchData = async () => {
-      const responseData = await axios.get<CombinedData>(`${process.env.REACT_APP_API_URL}/combinedData`);
-      
-      const { doctorVisits, medications, appointments } = responseData.data;
-      setDoctorVisits(doctorVisits);
-      setMedications(medications);
-      setAppointments(appointments);
-    };
-
-    fetchData().catch(console.error);
+    fetchCombinedData();
   }, []);
 
-  const handleMessageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setMessage(event.target.value);
+  const fetchCombinedData = async () => {
+    try {
+      const { data } = await axios.get<CombinedData>(`${process.env.REACT_APP_API_URL}/combinedData`);
+      setCombinedData(data);
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const handleSendMessage = async () => {
@@ -57,38 +51,33 @@ const PatientDashboard: React.FC<PatientDashboardProps> = () => {
 
   const handleBookAppointment = async (appointment: Appointment) => {
     await axios.post(`${process.env.REACT_APP_API_URL}/bookAppointment`, appointment);
-    // Update local state optimistically
-    setAppointments([...appointments, appointment]);
+    setCombinedData({
+      ...combinedData,
+      appointments: [...combinedData.appointments, appointment],
+    });
   };
 
   return (
     <div>
-      <h2>Recent Doctor Visits</h2>
-      <ul>
-        {doctorVisits.map(visit => (
-          <li key={visit.date}>{`${visit.date} - ${visit.doctorName}: ${visit.reason}`}</li>
+      <Section title="Recent Doctor Visits">
+        {combinedData.doctorVisits.map(visit => (
+          <ListItem key={visit.date} content={`${visit.date} - ${visit.doctorName}: ${visit.reason}`} />
         ))}
-      </ul>
+      </Section>
 
-      <h2>Medication Schedule</h2>
-      <ul>
-        {medications.map(medication => (
-          <li key={medication.name}>{`${medication.name}: ${medication.dosage} - ${medication.schedule}`}</li>
+      <Section title="Medication Schedule">
+        {combinedData.medications.map(medication => (
+          <ListItem key={medication.name} content={`${medication.name}: ${medication.dosage} - ${medication.schedule}`} />
         ))}
-      </ul>
+      </Section>
 
-      <h2>Upcoming Appointments</h2>
-      <ul>
-        {appointments.map(appointment => (
-          <li key={appointment.date}>{`${appointment.date} - ${appointment.doctorName}: ${appointment.purpose}`}</li>
+      <Section title="Upcoming Appointments">
+        {combinedData.appointments.map(appointment => (
+          <ListItem key={appointment.date} content={`${appointment.date} - ${appointment.doctorName}: ${appointment.purpose}`} />
         ))}
-      </ul>
+      </Section>
 
-      <div>
-        <h2>Send a Message to Your Healthcare Provider</h2>
-        <input type="text" value={message} onChange={handleMessageChange} />
-        <button onClick={handleSendMessage}>Send Message</button>
-      </div>
+      <MessagePanel value={message} onChange={setMessage} onSubmit={handleSendMessage} />
 
       <div>
         <h2>Book an Appointment</h2>
@@ -101,5 +90,39 @@ const PatientDashboard: React.FC<PatientDashboardProps> = () => {
     </div>
   );
 };
+
+interface SectionProps {
+  title: string;
+  children: React.ReactNode;
+}
+
+const Section: React.FC<SectionProps> = ({ title, children }) => (
+  <div>
+    <h2>{title}</h2>
+    <ul>{children}</ul>
+  </div>
+);
+
+interface ListItemProps {
+  content: string;
+}
+
+const ListItem: React.FC<ListItemProps> = ({ content }) => (
+  <li>{content}</li>
+);
+
+interface MessagePanelProps {
+  value: string;
+  onChange: (newValue: string) => void;
+  onSubmit: () => void;
+}
+
+const MessagePanel: React.FC<MessagePanelProps> = ({ value, onChange, onSubmit }) => (
+  <div>
+    <h2>Send a Message to Your Healthcare Provider</h2>
+    <input type="text" value={value} onChange={(e) => onChange(e.target.value)} />
+    <button onClick={onSubmit}>Send Message</button>
+  </div>
+);
 
 export default PatientDashboard;
