@@ -19,6 +19,12 @@ interface Appointment {
   purpose: string;
 }
 
+interface NewMedication {
+  name: string;
+  dosage: string;
+  schedule: string;
+}
+
 interface CombinedData {
   doctorVisits: DoctorVisit[];
   medications: Medication[];
@@ -30,6 +36,9 @@ interface PatientDashboardProps {}
 const PatientDashboard: React.FC<PatientDashboardProps> = () => {
   const [combinedData, setCombinedData] = useState<CombinedData>({ doctorVisits: [], medications: [], appointments: [] });
   const [message, setMessage] = useState<string>('');
+  const [newMedication, setNewMedication] = useState<NewMedication>({ name: '', dosage: '', schedule: '' });
+  const [startDateFilter, setStartDateFilter] = useState<string>('');
+  const [endDateFilter, setEndDateFilter] = useState<string>('');
 
   useEffect(() => {
     fetchCombinedData();
@@ -57,18 +66,46 @@ const PatientDashboard: React.FC<PatientDashboardProps> = () => {
     });
   };
 
+  const handleAddMedication = async (medication: Medication) => {
+    await axios.post(`${process.env.REACT_APP_API_URL}/addMedication`, medication);
+    setCombinedData({
+      ...combinedData,
+      medications: [...combinedData.medications, medication],
+    });
+  };
+
+  const filteredDoctorVisits = combinedData.doctorVisits.filter(visit => {
+    const visitDate = new Date(visit.date);
+    const start = new Date(startDateFilter);
+    const end = new Date(endDateFilter);
+    return visitDate >= start && visitDate <= end;
+  });
+
   return (
     <div>
       <Section title="Recent Doctor Visits">
-        {combinedData.doctorVisits.map(visit => (
+        {filteredDoctorVisits.map(visit => (
           <ListItem key={visit.date} content={`${visit.date} - ${visit.doctorName}: ${visit.reason}`} />
         ))}
+        <div>
+          Filter by date:
+          <input type="date" onChange={(e) => setStartDateFilter(e.target.value)} />
+          <input type="date" onChange={(e) => setEndDateFilter(e.target.value)} />
+          <button onClick={() => setCombinedData({ ...combinedData })}>Apply Filter</button>
+        </div>
       </Section>
 
       <Section title="Medication Schedule">
         {combinedData.medications.map(medication => (
           <ListItem key={medication.name} content={`${medication.name}: ${medication.dosage} - ${medication.schedule}`} />
         ))}
+        <div>
+          <h2>Add Medication</h2>
+          <input placeholder="Name" onChange={(e) => setNewMedication({ ...newMedication, name: e.target.value })} />
+          <input placeholder="Dosage" onChange={(e) => setNewMedication({ ...newMedication, dosage: e.target.value })} />
+          <input placeholder="Schedule" onChange={(e) => setNewMedication({ ...newMedication, schedule: e.target.value })} />
+          <button onClick={() => handleAddMedication(newMedication)}>Add</button>
+        </div>
       </Section>
 
       <Section title="Upcoming Appointments">
