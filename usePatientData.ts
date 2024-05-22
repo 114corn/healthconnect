@@ -13,32 +13,46 @@ export const usePatientData = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
 
-  const fetchPatientData = async () => {
+  const fetchData = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
       const response = await axios.get<PatientData[]>(`${process.env.REACT_APP_BACKEND_URL}/patients`);
       setPatientData(response.data);
-      setLoading(false);
     } catch (err) {
-      setError('Failed to fetch patient data.');
+      if (axios.isAxiosError(err)) {
+        // This checks if the error is from Axios, providing more information
+        setError(err.response?.data || 'Failed to fetch patient data.');
+      } else {
+        setError('An unexpected error occurred.');
+      }
+    } finally {
       setLoading(false);
     }
   };
 
-  const updatePatientData = async (patientId: string, newData: Partial<PatientData>) => {
+  const updateData = async (patientId: string, newData: Partial<PatientData>) => {
+    setLoading(true);
     try {
-      setLoading(true);
       await axios.put(`${process.env.REACT_APP_BACKEND_URL}/patients/${patientId}`, newData);
-      await fetchPatientData();
+      await fetchData();
     } catch (err) {
-      setError('Failed to update patient data.');
+      if (axios.isAxiosError(err)) {
+        // More detailed error information from Axios
+        setError(err.response?.data || 'Failed to update patient data.');
+      } else {
+        setError('An unexpected error occurred during update.');
+      }
+    } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchPatientData();
-  }, []);
+    fetchData();
+    // Although the original code didn't include `fetchData` in the dependency array,
+    // it's a common recommendation to include functions used inside useEffect
+    // unless you are absolutely sure they will not change or cause re-renders.
+  }, [fetchData]);
 
-  return { patientData, error, loading, updatePatientData };
+  return { patientData, error, loading, updatePatientData: updateData };
 };
