@@ -24,6 +24,7 @@ export const usePatientData = () => {
   };
 
   const fetchData = async () => {
+    if(loading) return; // Prevents duplicate requests
     setLoading(true);
     try {
       const response = await axios.get<PatientData[]>(`${baseURL}/patients`);
@@ -36,12 +37,16 @@ export const usePatientData = () => {
   };
 
   const updateData = async (patientId: string, newData: Partial<PatientData>) => {
+    if(loading) return; // Prevents duplicated update attempts
     setLoading(true);
     try {
       await axios.put(`${baseURL}/patients/${patientId}`, newData);
-      await fetchData(); // Refresh data after update
+      // Instead of refetching all data, consider updating the state optimistically.
+      // This could save bandwidth and reduce memory footprint
+      // by not creating a new array unless the data changes.
+      setPatientData((prev) => prev.map(patient => patient.id === patientId ? { ...patient, ...newData } : patient));
     } catch (err) {
-      handleError(err);
+    handleError(err);
     } finally {
       setLoading(false);
     }
@@ -49,7 +54,7 @@ export const usePatientData = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, []); // Ensure clean-up if needed in future adjustments.
 
   return { patientData, error, loading, updatePatientData: updateData };
 };
