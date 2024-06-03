@@ -20,16 +20,28 @@ def construct_event_data(summary, start_time, end_time, description=""):
     }
 
 def post_event_to_calendar(url, headers, event):
-    response = requests.post(url, headers=headers, json=event)
-    return response.json(), response.status_code
+    try:
+        response = requests.post(url, headers=headers, json=event)
+        response.raise_for_status()
+        return response.json(), response.status_cookie
+    except requests.exceptions.RequestException as e:
+        return {"error": {"message": str(e)}}, 500
 
 def update_calendar_event(url, headers, event):
-    response = requests.patch(url, headers=headers, json=event)
-    return response.json(), response.status_code
+    try:
+        response = requests.patch(url, headers=headers, json=event)
+        response.raise_for_status()
+        return response.json(), response.status_code
+    except requests.exceptions.RequestException as e:
+        return {"error": {"message": str(e)}}, 500
 
 def remove_event_from_calendar(url, headers):
-    response = requests.delete(url, headers=headers)
-    return response.status_code
+    try:
+        response = requests.delete(url, headers=headers)
+        response.raise_for_status()
+        return response.status_code
+    except requests.exceptions.RequestException as e:
+        return 500
 
 def schedule_appointment(summary, start_time, end_time, description=""):
     url = f"https://www.googleapis.com/calendar/v3/calendars/{CALENDAR_ID}/events"
@@ -61,13 +73,15 @@ def list_appointments(min_time, max_time):
     url = (f"https://www.googleapis.com/calendar/v3/calendars/{CALENDAR_ID}/"
            f"events?timeMin={min_time}&timeMax={max_time}&orderBy=startTime&singleEvents=true")
     headers = get_authentication_headers()
-    response = requests.get(url, headers=headers)
-    if response.status_code == 200:
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
         events = response.json().get('items', [])
         if not events:
             return "No appointments found."
         return [{'id': e['id'], 'summary': e['summary'], 'start': e['start']['dateTime'], 'end': e['end']['dateTime'], 'description': e.get('description', '')} for e in events]
-    return f"Failed to list appointments. Error: {response.json().get('error', {}).get('je', 'Unknown error')}"
+    except requests.exceptions.RequestException as e:
+        return f"Failed to list appointments. Error: {str(e)}"
 
 if __name__ == "__main__":
     now = datetime.now().isoformat() + 'Z'
