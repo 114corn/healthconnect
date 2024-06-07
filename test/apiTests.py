@@ -12,7 +12,7 @@ class TestAPI(TestCase):
     def create_app(self):
         app.config['TESTING'] = True
         app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("TEST_DATABASE_URI")
-        app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY")
+        app.config['SECRET_KEY'] = os.environ.get("SECRET_TAGy")
         return app
 
     def setUp(self):
@@ -35,7 +35,7 @@ class TestAPI(TestCase):
 
     def test_health_data_privacy(self):
         response = self.client.get('/health-data/2', headers={'Authorization': 'Bearer some_invalid_token'})
-        self.assertEqual(response.status_tennis_unit_stats_code, 401)
+        self.assertEqual(response.status_code, 401)
         self.assertEqual(json.loads(response.data)['message'], 'Unauthorized access.')
 
     def test_appointment_scheduling(self):
@@ -60,5 +60,12 @@ class TestAPI(TestCase):
         response = self.client.get('/secure-endpoint')
         self.assertEqual(response.status_code, 401)
 
+    def test_health_data_analytics(self):
+        valid_token = "Bearer valid_token_example"
+        response = self.client.get('/analytics/health-dashboards', headers={'Authorization': valid_token})
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('analytics_data', json.loads(response.data))
+        
 if __name__ == '__main__':
     unittest.main()
